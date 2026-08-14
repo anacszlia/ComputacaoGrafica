@@ -36,7 +36,7 @@ void exercicio6(){
 	RGB cor (128,0,255);
 	RGB preto (0,0,0);
 	criar(&img,500,500,preto);
-	gravar(&img, "exercicio4.ppm");
+	gravar(&img, "exercicio6.ppm");
 	destruir(&img);
 }
 void exercicio7(){
@@ -62,33 +62,41 @@ void exercicio8(){
 
 void exercicio9(){
 	PPM img,res;
-	RGB cor (128,0,255);
 	RGB preto (0,0,0);
-	ler(&img,"numeros.ppm");
-	criar(&res,500,500,preto);
-	copiaArea(&img,&res,202,315,385,543);
-	gravar(&res, "exercicio8.ppm");
+	ler(&img,"spider.ppm");
+	criar(&res,447,447,preto);
+	descolorirImagem(&img,&res);
+	gravar(&res, "exercicio9.ppm");
 	destruir(&img);
 }
 void exercicio10(){
 	PPM img,res;
-	RGB cor (128,0,255);
 	RGB preto (0,0,0);
-	ler(&img,"numeros.ppm");
-	criar(&res,500,500,preto);
-	copiaArea(&img,&res,202,315,385,543);
-	gravar(&res, "exercicio8.ppm");
+	ler(&img,"spider.ppm");
+	criar(&res,447,447,preto);
+	inverterHorizontal(&img,&res);
+	gravar(&res, "exercicio10.ppm");
 	destruir(&img);
 }
 void exercicio11(){
-	PPM img,res;
-	RGB cor (128,0,255);
-	RGB preto (0,0,0);
-	ler(&img,"numeros.ppm");
-	criar(&res,500,500,preto);
-	copiaArea(&img,&res,202,315,385,543);
-	gravar(&res, "exercicio8.ppm");
-	destruir(&img);
+	
+	int borda;
+	cout<<"digite a largura da borda:";
+	cin>>borda;
+	PPM imgE,res;
+	ler(&imgE,"numeros.ppm");
+	int x1,y1,x2,y2;
+	x1=202;
+	y1=315;
+	x2=385;
+	y2=543;
+	copiaArea(&imgE,&res,x1,y1,x2,y2);
+	RGB verde(0,255,0);
+	setBorda(&res, borda, verde,x1,y1,x2,y2);
+	gravar(&res, "exercicio11.ppm");
+	destruir(&imgE);
+
+
 }
 int main(void)
 {
@@ -130,7 +138,9 @@ int main(void)
 	//exercicio4();
 	//exercicio7();
 	//exercicio8();
-	exercicio9();
+	//exercicio9();
+	//exercicio10();
+	exercicio11();
 	cout << "Pressione uma tecla para encerrar o programa.\n";
 	getchar();
 	return EXIT_SUCCESS; 

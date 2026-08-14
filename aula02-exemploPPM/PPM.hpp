@@ -287,11 +287,66 @@ void copiaArea(PPM *imgE,PPM *imgS,int x1,int y1,int x2,int y2){
     if(imgE->larg != imgS->larg || imgE->alt != imgS->alt){
         criar(imgS,imgE->larg,imgE->alt);
     }
+    if(x1<0 || x1>imgE->larg || x2<0 || x2>imgE->larg || y1<0 || y1>imgE->alt || y2<0 || y2>imgE->alt){
+        cout<<"coordenadas invalidas";
+        return;
+    }
     for(size_t y=y1;y<y2;y++){
 
         for(size_t x=x1;x<x2;x++){
             RGB pixel = getPixel(imgE,x,y);
             setPixel(imgS,x,y,pixel);
+        }
+    }
+}
+
+void descolorirImagem(PPM *imgE,PPM *imgS){
+    if(imgE->larg != imgS->larg || imgE->alt != imgS->alt){
+        criar(imgS,imgE->larg,imgE->alt);
+    }
+    for(size_t y=0;y<imgE->alt;y++){
+
+        for(size_t x=0;x<imgE->larg;x++){
+            RGB pixel= getPixel(imgE,x,y);
+            unsigned char v = (unsigned char)(0.299*pixel.r + 0.587*pixel.g + 0.114*pixel.b);
+            RGB cinza(v,v,v);
+            setPixel(imgS,x,y,cinza);
+        }
+    }
+
+}
+
+void inverterHorizontal(PPM *imgE,PPM *imgS){
+    if(imgE->larg != imgS->larg || imgE->alt != imgS->alt){
+        criar(imgS,imgE->larg,imgE->alt);
+    }
+    for(size_t y=0;y<imgE->alt;y++){
+
+        for(size_t x=0;x<imgE->larg;x++){
+            RGB pixel= getPixel(imgE,x,y);
+            setPixel(imgS,imgE->larg-x-1,y,pixel);
+        }
+    }
+
+}
+void setBorda(PPM *img,int borda,RGB cor,int x1,int y1,int x2,int y2){
+    for(int y=0;y<img->alt;y++){
+        for(int x=0;x<img->larg;x++){
+            //if(x<x1+borda || x>x2-borda || y<y1+borda || y>y2-borda){
+              //  setPixel(img,x,y,cor);
+            //}
+            //if((x>=x1 && x<=x2 && y>=y1 && y<=y2) && (x<x1+borda || x>x2-borda || y<y1+borda || y>y2-borda)){
+              //  setPixel(img,x,y,cor);
+            //}
+            if((x>=x1-borda && x<x1 && y>=y1-borda && y<=y2+borda)
+            || (x>x2 && x<=x2+borda && y>=y1-borda && y<=y2+borda)
+            || (y<y1 && y>=y1-borda && x>=x1 && x<=x2)
+            || (y>y2 && y<=y2+borda && x>=x1 && x<=x2)
+            )
+            {
+                setPixel(img, x, y, cor);
+            }
+            
         }
     }
 }
