@@ -350,4 +350,67 @@ void setBorda(PPM *img,int borda,RGB cor,int x1,int y1,int x2,int y2){
         }
     }
 }
+
+
+void inverterCores(PPM *imgE,PPM *imgS){
+    if(imgE->larg != imgS->larg || imgE->alt != imgS->alt){
+        criar(imgS,imgE->larg,imgE->alt);
+    }
+    for(size_t y=0;y<imgE->alt;y++){
+
+        for(size_t x=0;x<imgE->larg;x++){
+            RGB pixel= getPixel(imgE,x,y);
+            RGB inv(255-pixel.r,255-pixel.g,255-pixel.b);
+            setPixel(imgS,x,y,inv);
+        }
+    }
+
+}
+
+unsigned char quantizar(unsigned char valor){
+    if(valor<85){
+        valor=0;
+    }
+    else if(valor>=85 && valor<170){
+        valor=85;
+    }
+    else if(valor>=170){
+        valor=170;
+    }
+    return valor;
+}
+
+void reduzirQuantizacao(PPM *imgE,PPM *imgS){
+    if(imgE->larg != imgS->larg || imgE->alt != imgS->alt){
+        criar(imgS,imgE->larg,imgE->alt);
+    }
+    for(size_t y=0;y<imgE->alt;y++){
+
+        for(size_t x=0;x<imgE->larg;x++){
+            RGB pixel= getPixel(imgE,x,y);
+            unsigned char quantizador = quantizar(pixel.r);
+            unsigned char quantizadog = quantizar(pixel.g);
+            unsigned char quantizadob = quantizar(pixel.b);
+            RGB quantizado(quantizador,quantizadog,quantizadob);
+            setPixel(imgS,x,y,quantizado);
+        }
+    }
+
+}
+
+void dda(PPM *img){
+    int x1=0,y1=0,x2=img->larg-1,y2=img->alt-1;
+    int dx = x2-x1;
+    int dy = y2-y1;
+    int passos = max(abs(dx),abs(dy));
+    float xinc = dx/(float)passos;
+    float yinc = dy/(float)passos;
+    float x=x1;
+    float y=y1;
+    for(int i=0;i<=passos;i++){
+        setPixel(img,(int)x,(int)y,RGB(255,255,255));
+        x+=xinc;
+        y+=yinc;
+    }
+}
 #endif

@@ -1,6 +1,8 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "PPM.hpp"
-
+#include <vector>
 using namespace std;
 
 void exercicio3(){
@@ -98,6 +100,104 @@ void exercicio11(){
 
 
 }
+
+void exercicio12(){
+	// PPM img1,img2,img3;
+	// RGB ciano(0,250,250),rosa(255, 105, 180),vermelho(255,0,0);
+	// criar(&img1,500,500,ciano);
+	// criar(&img2,500,500,rosa);
+	// criar(&img3,500,500,vermelho);
+	// gravar(&img1, "img1.ppm");
+	// gravar(&img2, "img2.ppm");
+	// gravar(&img3, "img3.ppm");
+
+	fstream fs;
+	string linha;
+    fs.open ("entrada.txt", fstream::in);
+	if(!fs.is_open())
+	{
+		cout << "Erro ao abrir arquivo!\n";
+		return;
+	}
+
+	linha = "";
+	vector<PPM> imagens;
+	while(getline(fs, linha))
+	{	
+		cout << "Linha lida: [" << linha << "]" << endl;
+
+		PPM img;
+		if(linha.size()>4 && ler(&img, linha))
+		{
+			cout << "Imagem carregada: " << linha << endl;
+			imagens.push_back(img);
+		}
+		else
+		{
+			cout << "Erro ao carregar imagem: " << linha << endl;
+		}
+
+		linha= "";
+	}
+  
+
+	fs.close();
+
+	cout << "Total de imagens: " << imagens.size() << endl;
+	int larg = imagens[0].larg, alt= imagens[0].alt;
+	for(int i=1; i<imagens.size(); i++)
+	{
+		if(larg!= imagens[i].larg || alt!= imagens[i].alt)
+		{
+			cout << "Erro: as imagens de entrada devem possuir o mesmo tamanho!\n";
+			return;
+		}
+	}
+
+	PPM imgS;
+	int offset=0;
+	criar(&imgS, larg*imagens.size(), alt);
+	for(int i=0; i<imagens.size(); i++)
+	{
+		for(int y=0; y<alt; y++)
+		{
+			for(int x=0; x<larg; x++)
+			{
+				setPixel(&imgS, x+offset, y, getPixel(&imagens[i], x, y));
+			}
+		}
+		offset += larg;
+
+	}
+	gravar(&imgS, "exercicio12.ppm");
+
+
+}
+
+void exercicio13(){
+	PPM img, imgS;
+	//RGB amarelo(255,255,0);
+	//criar(&img, 500, 500, amarelo);
+	ler(&img, "ifsul.ppm");
+	inverterCores(&img,&imgS);
+	gravar(&imgS, "exercicio13.ppm");
+}
+
+void exercicio14(){
+	PPM img, imgS;
+	ler(&img, "spider.ppm");
+	reduzirQuantizacao(&img,&imgS);
+	gravar(&imgS, "exercicio14.ppm");
+}
+
+void exercicio15(){
+	PPM img;
+	ler(&img, "numeros.ppm");
+	dda(&img);
+
+	gravar(&img, "exercicio15.ppm");
+}
+
 int main(void)
 {
 
@@ -140,7 +240,11 @@ int main(void)
 	//exercicio8();
 	//exercicio9();
 	//exercicio10();
-	exercicio11();
+	//exercicio11();
+	//exercicio12();
+	//exercicio13();
+	//exercicio14();
+	exercicio15();
 	cout << "Pressione uma tecla para encerrar o programa.\n";
 	getchar();
 	return EXIT_SUCCESS; 
