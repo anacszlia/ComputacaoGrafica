@@ -1,0 +1,25 @@
+#nome do arquivo do material
+mtllib matexer2.mtl
+
+#vertices
+v -1 0 2
+v 1 0 -2
+v 1 2 -2
+v -1 2 -2
+v 1 0 -4
+v 1 2 -4 
+
+#coordenadas de textura
+vt 0.0 0.0
+vt 5.0 0.0
+vt 0.5 1.0
+vt 1.0 1.0
+vt 0.0 1.0
+vt 1.0 0.0
+vt 1.0 1.0
+
+
+#faces com as coordenadas de textura
+usemtl matexer2
+f 1/1 2/2 3/3 4/4 
+f 2/2 5/5 6/6 3/3
