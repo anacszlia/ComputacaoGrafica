@@ -2,7 +2,10 @@
 using namespace std;
 
 #include "PPM.hpp"
+#include "PGM.hpp"
 #include <Eigen/Dense>
+#include <vector>
+#include <algorithm>
 using namespace Eigen;
 
 #define _PI	3.14159265358979323846
@@ -27,8 +30,8 @@ Matrix3f getRotacao(float anfGraus){
 	return R;
 
 }
-
-void transf2D(PPM* imgE, PPM* imgS, Matrix3f M){
+template <typename T>
+void transf2D(T* imgE, T* imgS, Matrix3f M){
 
 	if(!imgE->pixels)return;
 	if(imgE->alt != imgS->alt || imgE->larg != imgS->larg){
@@ -50,12 +53,10 @@ void transf2D(PPM* imgE, PPM* imgS, Matrix3f M){
 		}
 
 	}
-
-
-
 }
 
-void transf2DInv(PPM* imgE, PPM* imgS, Matrix3f M){
+template <typename T>
+void transf2DInv(T* imgE, T* imgS, Matrix3f M){
 
 	if(!imgE->pixels)return;
 	if(imgE->alt != imgS->alt || imgE->larg != imgS->larg){
@@ -77,9 +78,6 @@ void transf2DInv(PPM* imgE, PPM* imgS, Matrix3f M){
 		}
 
 	}
-
-
-
 }
 
 Matrix3f getTranslacao(float tx, float ty)
@@ -121,6 +119,78 @@ Matrix3f getEscala(float sx,float sy)
 	T(1,1) = sy;
 	T(0,0) = sx;
 	return T;
+}
+
+template <typename T>
+vector<int> getVizinhos(T* img, int x, int y){
+	int d[8][2] = {{-1,-1},{0,-1},{1,-1},{-1,0},{1,0},{-1,1},{0,1},{1,1}};
+	vector<int> vizinhos;
+	for(int i=0;i<8;i++){
+		int nx = x + d[i][0];
+		int ny = y + d[i][1];
+		if(coordValida(img,nx,ny)){
+			vizinhos.push_back(getPixel(img,nx,ny));
+		}
+	}
+	sort(vizinhos.begin(), vizinhos.end());
+	return vizinhos;
+}
+
+void exercicio7(){
+	PGM img;
+	ler(&img, "picotepgm.pgm");
+	//para ler uma imagem PGM e preencher os buracos/artefatos da imagem com o
+	//valor da mediana, o qual deve ser calculado com base na intensidade de cor de pixels vizinhos.
+	PGM imgS;
+	criar(&imgS,img.larg,img.alt);
+	float cx =(img.larg-1)/ 2.0f;
+	float cy =(img.alt-1)/ 2.0f;
+	Matrix3f Tc = getTranslacao(cx, cy);
+	Matrix3f Tinv = getTranslacao(-cx, -cy);
+	for(int i = 0; i < img.larg; i++){
+		for(int j = 0; j < img.alt; j++){
+			if(getPixel(&img, i, j) == 0){
+				vector<int> vizinhos = getVizinhos(&img, i, j);
+				if(vizinhos.size() > 0 && vizinhos.size() % 2 == 1){
+					setPixel(&imgS, i, j, vizinhos[vizinhos.size()/2]);
+				} else if(vizinhos.size() > 0 && vizinhos.size() % 2 == 0){
+					setPixel(&imgS, i, j, (vizinhos[vizinhos.size()/2-1] + vizinhos[vizinhos.size()/2])/2);
+				} else {
+					setPixel(&imgS, i, j, 0);
+				}
+			} else {
+				setPixel(&imgS, i, j, getPixel(&img, i, j));
+			}
+		}
+	}
+	gravar(&imgS,"picotePreenchido.pgm");
+
+
+		
+	int buracos = 0, preenchidos = 0;
+	for(int i = 0; i < img.larg; i++)
+		for(int j = 0; j < img.alt; j++)
+			if(getPixel(&img, i, j) == 0) buracos++;
+
+	cout << "Buracos encontrados: " << buracos << endl;
+
+
+	for(int i = 0; i < imgS.larg; i++)
+		for(int j = 0; j < imgS.alt; j++)
+			if(getPixel(&imgS, i, j) == 0) preenchidos++;
+
+	cout << "Preenchidos: " << preenchidos << endl;
+
+}
+void preencher_area3(PPM *pgm,PPM *pgm2,int x1,int y1,int x2,int y2){
+    int i=0, j=0;
+    for(int y=y1;y<=y2 && i<pgm2->alt;y++,i++){
+		int j = 0;
+       for(int x=x1;x<=x2 && j<pgm2->larg;x++,j++){
+            if(coordValida(pgm2,i,j))
+                setPixel(pgm,x,y,getPixel(pgm2,i,j));
+       }
+    }
 }
 
 int main(void)
@@ -169,11 +239,6 @@ int main(void)
 	// 	cout << "Ponto " << i+1 << ": " << p.transpose() << endl;
 	// }
 	
-	PPM imgE,imgS;
-	ler(&imgE,"numeros.ppm");
-	float cx =(imgE.larg-1)/ 2.0f;
-	float cy =(imgE.alt-1)/ 2.0f;
-
 	// Matrix3f T= getTranslacao(cx,cy);
 	// Matrix3f Tinv= getTranslacao(-cx,-cy);
 	// Matrix3f R= getRotacao(45.0f);
@@ -184,11 +249,59 @@ int main(void)
 	//gravar(&imgS,"numeros45.ppm");
 	
 	//q1 cisalhamento horizontal de 0.9 e reflexao em torno do eixo y
-	Matrix3f Tc = getTranslacao(cx, cy);
-	Matrix3f Tinv = getTranslacao(-cx, -cy);
-	// Matrix3f Cis = getCisalhamentoHorizontal(-0.9);
-	// Matrix3f Ref = getReflexaoY();
-	// Matrix3f M = Tc * Cis * Ref * Tinv;
+	PPM imgE,imgS,aux;
+
+	ler(&imgE,"numeros.ppm");
+
+	int x1=18,y1=626,x2=174,y2=866;
+
+	int larg=x2-x1;
+	int alt=y2-y1;
+
+	float cx=larg/2.0f;
+	float cy=alt/2.0f;
+
+	criar(&imgS,larg,alt);
+	criar(&aux,larg,alt);
+
+	for(int y=0;y<alt;y++){
+		for(int x=0;x<larg;x++){
+			setPixel(&imgS,x,y,getPixel(&imgE,x1+x,y1+y));
+		}
+	}
+
+	RGB branco=RGB(255,255,255);
+
+	for(int y=0;y<alt;y++){
+		for(int x=0;x<larg;x++){
+			setPixel(&aux,x,y,branco);
+		}
+	}
+
+	Matrix3f Tc=getTranslacao(cx,cy);
+	Matrix3f Tinv=getTranslacao(-cx,-cy);
+	Matrix3f R=getRotacao(45.0f);
+
+	Matrix3f M=Tc*R*Tinv;
+
+	transf2D(&imgS,&aux,M);
+
+	gravar(&aux,"exer91.ppm");
+
+	preencher_area3(&imgE,&aux,x1,y1,x2,y2);
+
+	gravar(&imgE,"exer9.ppm");
+
+	// Matrix3f Esc = getEscala(2.0f, 2.0f);
+	// Matrix3f M = Tc * Esc * Tinv;
+	// transf2D(&imgE, &imgS, M);
+	// gravar(&imgS, "picotepgm.pgm");
+
+	
+	//volta a imagem para a posicao original com a TInv
+	// Matrix3f M2 = Tc * Cis * Ref * Tinv;
+	// transf2D(&imgE,&imgS, M2);
+	// gravar(&imgS,"testepicote2.ppm");
 	// transf2DInv(&imgE,&imgS,M.inverse());
 	// gravar(&imgS,"exer1.ppm");
 
@@ -210,132 +323,133 @@ int main(void)
 
 
 //q4 programa
-	int opcao = 0;
-	do {
-		cout << "\n--- Menu de Transformacoes ---\n";
-		cout << "1. Translacao\n";
-		cout << "2. Rotacao\n";
-		cout << "3. Escala\n";
-		cout << "4. Cisalhamento Horizontal\n";
-		cout << "5. Cisalhamento Vertical\n";
-		cout << "6. Reflexao em torno do eixo X\n";
-		cout << "7. Reflexao em torno do eixo Y\n";
-		cout << "0. Aplicar e sair\n";
-		cout << "Opcao: ";
-		cin >> opcao;
+//comando para rodar o programa para reconhecer o eigen: g++ -I /usr/include/eigen3 main.cpp PPM.cpp -o main
+	// int opcao = 0;
+	// do {
+	// 	cout << "\n--- Menu de Transformacoes ---\n";
+	// 	cout << "1. Translacao\n";
+	// 	cout << "2. Rotacao\n";
+	// 	cout << "3. Escala\n";
+	// 	cout << "4. Cisalhamento Horizontal\n";
+	// 	cout << "5. Cisalhamento Vertical\n";
+	// 	cout << "6. Reflexao em torno do eixo X\n";
+	// 	cout << "7. Reflexao em torno do eixo Y\n";
+	// 	cout << "0. Aplicar e sair\n";
+	// 	cout << "Opcao: ";
+	// 	cin >> opcao;
 
-		Matrix3f nova = Matrix3f::Identity();
+	// 	Matrix3f nova = Matrix3f::Identity();
 
-		if (opcao == 1) {
-			float tx, ty;
-			cout << "tx ty: "; cin >> tx >> ty;
-			nova = getTranslacao(tx, ty);
-		} else if (opcao == 2) {
-			float ang;
-			cout << "Angulo (graus): "; cin >> ang;
-			nova = getRotacao(ang);
-		} else if (opcao == 3) {
-			float sx, sy;
-			cout << "sx sy: "; cin >> sx >> sy;
-			nova = getEscala(sx, sy);
-		} else if (opcao == 4) {
-			float shx;
-			cout << "shx: "; cin >> shx;
-			nova = getCisalhamentoHorizontal(shx);
-		} else if (opcao == 5) {
-			float shy;
-			cout << "shy: "; cin >> shy;
-			nova = getCisalhamentoVertical(shy);
-		} else if (opcao == 6) {
-			nova = getReflexaoX();
-		} else if (opcao == 7) {
-			nova = getReflexaoY();
-		} else if (opcao != 0) {
-			cout << "Opcao invalida.\n";
-			continue;
-		}
+	// 	if (opcao == 1) {
+	// 		float tx, ty;
+	// 		cout << "tx ty: "; cin >> tx >> ty;
+	// 		nova = getTranslacao(tx, ty);
+	// 	} else if (opcao == 2) {
+	// 		float ang;
+	// 		cout << "Angulo (graus): "; cin >> ang;
+	// 		nova = getRotacao(ang);
+	// 	} else if (opcao == 3) {
+	// 		float sx, sy;
+	// 		cout << "sx sy: "; cin >> sx >> sy;
+	// 		nova = getEscala(sx, sy);
+	// 	} else if (opcao == 4) {
+	// 		float shx;
+	// 		cout << "shx: "; cin >> shx;
+	// 		nova = getCisalhamentoHorizontal(shx);
+	// 	} else if (opcao == 5) {
+	// 		float shy;
+	// 		cout << "shy: "; cin >> shy;
+	// 		nova = getCisalhamentoVertical(shy);
+	// 	} else if (opcao == 6) {
+	// 		nova = getReflexaoX();
+	// 	} else if (opcao == 7) {
+	// 		nova = getReflexaoY();
+	// 	} else if (opcao != 0) {
+	// 		cout << "Opcao invalida.\n";
+	// 		continue;
+	// 	}
 
-		if (opcao != 0)
-			M = nova * M;
+	// 	if (opcao != 0)
+	// 		M = nova * M;
 
-	} while (opcao != 0);
+	// } while (opcao != 0);
 
-	Matrix3f Mfinal = Tc * M * Tinv;
-	criar(&imgS, imgE.larg, imgE.alt);
-	transf2DInv(&imgE, &imgS, Mfinal.inverse());
-	gravar(&imgS, nomeSaida);
-	cout << "Imagem salva em: " << nomeSaida << endl;
+	// Matrix3f Mfinal = Tc * M * Tinv;
+	// criar(&imgS, imgE.larg, imgE.alt);
+	// transf2DInv(&imgE, &imgS, Mfinal.inverse());
+	// gravar(&imgS, nomeSaida);
+	// cout << "Imagem salva em: " << nomeSaida << endl;
 	
 	
-	//q5 programa
+	// q5 programa
 	
-	int nTrans = 0;
-    string nomeEntrada, nomeSaida, mapeamento;
-    vector<Matrix3f> transformacoes;
+	// int nTrans = 0;
+    // string nomeEntrada, nomeSaida, mapeamento;
+    // vector<Matrix3f> transformacoes;
 
-    string token;
-    while (cin >> token) {
-        if (token == "NTRANS") {
-            cin >> nTrans;
-        } else if (token == "IMGE") {
-            cin >> nomeEntrada;
-        } else if (token == "IMGS") {
-            cin >> nomeSaida;
-        } else if (token == "MAP") {
-            cin >> mapeamento;
-        } else if (token == "T") {
-            float tx, ty; cin >> tx >> ty;
-            transformacoes.push_back(getTranslacao(tx, ty));
-        } else if (token == "R") {
-            float ang; cin >> ang;
-            transformacoes.push_back(getRotacao(ang));
-        } else if (token == "S") {
-            float sx, sy; cin >> sx >> sy;
-            transformacoes.push_back(getEscala(sx, sy));
-        } else if (token == "CI") {
-            string eixo; cin >> eixo;
-            float sh; cin >> sh;
-            if (eixo == "H") transformacoes.push_back(getCisH(sh));
-            else             transformacoes.push_back(getCisV(sh));
-        } else if (token == "RE") {
-            string eixo; cin >> eixo;
-            if (eixo == "X") transformacoes.push_back(getRefX());
-            else             transformacoes.push_back(getRefY());
-        }
-    }
+    // string token;
+    // while (cin >> token) {
+    //     if (token == "NTRANS") {
+    //         cin >> nTrans;
+    //     } else if (token == "IMGE") {
+    //         cin >> nomeEntrada;
+    //     } else if (token == "IMGS") {
+    //         cin >> nomeSaida;
+    //     } else if (token == "MAP") {
+    //         cin >> mapeamento;
+    //     } else if (token == "T") {
+    //         float tx, ty; cin >> tx >> ty;
+    //         transformacoes.push_back(getTranslacao(tx, ty));
+    //     } else if (token == "R") {
+    //         float ang; cin >> ang;
+    //         transformacoes.push_back(getRotacao(ang));
+    //     } else if (token == "S") {
+    //         float sx, sy; cin >> sx >> sy;
+    //         transformacoes.push_back(getEscala(sx, sy));
+    //     } else if (token == "CI") {
+    //         string eixo; cin >> eixo;
+    //         float sh; cin >> sh;
+    //         if (eixo == "H") transformacoes.push_back(getCisH(sh));
+    //         else             transformacoes.push_back(getCisV(sh));
+    //     } else if (token == "RE") {
+    //         string eixo; cin >> eixo;
+    //         if (eixo == "X") transformacoes.push_back(getRefX());
+    //         else             transformacoes.push_back(getRefY());
+    //     }
+    // }
 
-    PPM imgE, imgS;
-    if (!ler(&imgE, nomeEntrada)) return EXIT_FAILURE;
+    // PPM imgE, imgS;
+    // if (!ler(&imgE, nomeEntrada)) return EXIT_FAILURE;
 
-    int L = imgE.larg, A = imgE.alt, N = (int)transformacoes.size();
-    criar(&imgS, L * N, A);
+    // int L = imgE.larg, A = imgE.alt, N = (int)transformacoes.size();
+    // criar(&imgS, L * N, A);
 
-    float cx = (L - 1) / 2.0f;
-    float cy = (A - 1) / 2.0f;
-    Matrix3f Tc   = getTranslacao( cx,  cy);
-    Matrix3f Tinv = getTranslacao(-cx, -cy);
+    // float cx = (L - 1) / 2.0f;
+    // float cy = (A - 1) / 2.0f;
+    // Matrix3f Tc   = getTranslacao( cx,  cy);
+    // Matrix3f Tinv = getTranslacao(-cx, -cy);
 
     // M acumula as transformações em série (no espaço centrado)
-    Matrix3f M = Matrix3f::Identity();
+    // Matrix3f M = Matrix3f::Identity();
 
-    for (int i = 0; i < N; i++) {
-        M = transformacoes[i] * M;
-        Matrix3f Mfinal = Tc * M * Tinv;
-        int xOffset = i * L;
+    // for (int i = 0; i < N; i++) {
+    //     M = transformacoes[i] * M;
+    //     Matrix3f Mfinal = Tc * M * Tinv;
+    //     int xOffset = i * L;
 
-        if (mapeamento == "DIR") {
-            aplicarDireto(&imgE, &imgS, Mfinal, xOffset);
-        } else {
-            aplicarInverso(&imgE, &imgS, Mfinal.inverse(), xOffset);
-        }
-    }
+    //     if (mapeamento == "DIR") {
+    //         aplicarDireto(&imgE, &imgS, Mfinal, xOffset);
+    //     } else {
+    //         aplicarInverso(&imgE, &imgS, Mfinal.inverse(), xOffset);
+    //     }
+    // }
 
-    gravar(&imgS, nomeSaida);
-    cout << "Imagem salva em: " << nomeSaida << endl;
+    // gravar(&imgS, nomeSaida);
+    // cout << "Imagem salva em: " << nomeSaida << endl;
 	
 	
-	destruir(&imgE);
-	destruir(&imgS);
+	// destruir(&imgE);
+	// destruir(&imgS);
 
 	cout << "Pressione uma tecla para encerrar o programa.\n";
 	getchar();
