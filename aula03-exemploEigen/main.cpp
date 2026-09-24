@@ -182,6 +182,118 @@ void exercicio7(){
 	cout << "Preenchidos: " << preenchidos << endl;
 
 }
+// Q1: rotacao 30g + escala 1.5x com mapeamento inverso
+void questao1(){
+    PPM imgE, imgS;
+    ler(&imgE, "numeros.ppm");
+    criar(&imgS, imgE.larg, imgE.alt);
+    float cx = (imgE.larg-1)/2.0f, cy = (imgE.alt-1)/2.0f;
+    Matrix3f Tc = getTranslacao(cx,cy), Tinv = getTranslacao(-cx,-cy);
+    Matrix3f M = Tc * getEscala(1.5f,1.5f) * getRotacao(30.0f) * Tinv;
+    transf2DInv(&imgE, &imgS, M.inverse());
+    gravar(&imgS, "q1.ppm");
+	destruir(&imgE);
+	destruir(&imgS);
+}
+
+// Q2: filtro de mediana 3x3 em PGM com ruido sal-e-pimenta
+void questao2(){
+    PGM imgE, imgS;
+    ler(&imgE, "picotepgm.pgm");
+    criar(&imgS, imgE.larg, imgE.alt);
+    for(int x=0; x<imgE.larg; x++){
+        for(int y=0; y<imgE.alt; y++){
+            int v = getPixel(&imgE,x,y);
+            if(v==0 || v==255){
+                vector<int> viz;
+                for(int dx=-1;dx<=1;dx++)
+                    for(int dy=-1;dy<=1;dy++)
+                        if(dx!=0||dy!=0)
+                            if(coordValida(&imgE,x+dx,y+dy))
+                                viz.push_back(getPixel(&imgE,x+dx,y+dy));
+                sort(viz.begin(),viz.end());
+                setPixel(&imgS,x,y, viz.empty()?v : viz[viz.size()/2]);
+            } else {
+                setPixel(&imgS,x,y,v);
+            }
+        }
+    }
+    gravar(&imgS, "q2.pgm");
+	destruir(&imgE);
+	destruir(&imgS);
+}
+
+// Q3: recorte (50,50)-(200,200), cisalhamento H 0.5 + reflexao X, cola de volta
+void questao3(){
+    PPM imgE, recorte, aux;
+    ler(&imgE, "numeros.ppm");
+    int x1=50,y1=50,x2=200,y2=200;
+    int larg=x2-x1, alt=y2-y1;
+    criar(&recorte,larg,alt);
+    criar(&aux,larg,alt);
+    for(int y=0;y<alt;y++)
+        for(int x=0;x<larg;x++)
+            setPixel(&recorte,x,y,getPixel(&imgE,x1+x,y1+y));
+    float cx=(larg-1)/2.0f, cy=(alt-1)/2.0f;
+    Matrix3f Tc=getTranslacao(cx,cy), Tinv=getTranslacao(-cx,-cy);
+    Matrix3f M = Tc * getCisalhamentoHorizontal(0.5f) * getReflexaoX() * Tinv;
+    transf2DInv(&recorte,&aux,M.inverse());
+    for(int y=0;y<alt;y++)
+        for(int x=0;x<larg;x++)
+            setPixel(&imgE,x1+x,y1+y,getPixel(&aux,x,y));
+    gravar(&imgE, "q3.ppm");
+	destruir(&imgE);
+	destruir(&recorte);
+	destruir(&aux);
+}
+
+// Q4: imagem original na metade esquerda, reflexao Y (mapeamento direto) na direita
+void questao4(){
+    PPM imgE, imgS;
+    ler(&imgE, "numeros.ppm");
+    criar(&imgS, imgE.larg*2, imgE.alt);
+    for(int y=0;y<imgE.alt;y++)
+        for(int x=0;x<imgE.larg;x++)
+            setPixel(&imgS,x,y,getPixel(&imgE,x,y));
+    float cx=(imgE.larg-1)/2.0f, cy=(imgE.alt-1)/2.0f;
+    Matrix3f Tc=getTranslacao(cx,cy), Tinv=getTranslacao(-cx,-cy);
+    Matrix3f M = Tc * getReflexaoY() * Tinv;
+    for(int y=0;y<imgE.alt;y++){
+        for(int x=0;x<imgE.larg;x++){
+            Vector3f ps = M * Vector3f(x,y,1.0f);
+            int xS=round(ps.x()), yS=round(ps.y());
+            if(coordValida(&imgE,xS,yS))
+                setPixel(&imgS, imgE.larg+xS, yS, getPixel(&imgE,x,y));
+        }
+    }
+    gravar(&imgS, "q4.ppm");
+	destruir(&imgS);
+}
+
+// Q5: negativo na regiao (x1,y1)-(x2,y2), depois rotacao 90g com mapeamento inverso
+void questao5(){
+    PGM imgE, imgS, imgRot;
+    ler(&imgE, "picotepgm.pgm");
+    criar(&imgS, imgE.larg, imgE.alt);
+    int x1=50,y1=50,x2=200,y2=200;
+    for(int y=0;y<imgE.alt;y++)
+        for(int x=0;x<imgE.larg;x++){
+            int v = getPixel(&imgE,x,y);
+            if(x>=x1&&x<x2&&y>=y1&&y<y2)
+                setPixel(&imgS,x,y,255-v);
+            else
+                setPixel(&imgS,x,y,v);
+        }
+    criar(&imgRot, imgS.larg, imgS.alt);
+    float cx=(imgS.larg-1)/2.0f, cy=(imgS.alt-1)/2.0f;
+    Matrix3f Tc=getTranslacao(cx,cy), Tinv=getTranslacao(-cx,-cy);
+    Matrix3f M = Tc * getRotacao(90.0f) * Tinv;
+    transf2DInv(&imgS, &imgRot, M.inverse());
+    gravar(&imgRot, "q5.pgm");
+	destruir(&imgS);
+	destruir(&imgRot);
+}
+
 void preencher_area3(PPM *pgm,PPM *pgm2,int x1,int y1,int x2,int y2){
     int i=0, j=0;
     for(int y=y1;y<=y2 && i<pgm2->alt;y++,i++){
@@ -450,6 +562,12 @@ int main(void)
 	
 	// destruir(&imgE);
 	// destruir(&imgS);
+
+	questao1();
+	questao2();
+	questao3();
+	questao4();
+	questao5();
 
 	cout << "Pressione uma tecla para encerrar o programa.\n";
 	getchar();
